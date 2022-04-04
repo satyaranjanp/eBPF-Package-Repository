@@ -1,0 +1,8 @@
+name: "CodeQL config"
+
+paths:
+  - connection-limit
+  - ipfix-flow-exporter
+  - ratelimiting
+  - tc-root
+  - xdp-root
