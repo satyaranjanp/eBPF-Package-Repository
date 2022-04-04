@@ -24,18 +24,11 @@ jobs:
         dir: ['xdp-root', 'tc-root', 'connection-limit', 'ipfix-flow-exporter', 'ratelimiting']
         
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v1
-      with:
-        languages: ${{ matrix.language }}
-        config-file: .github/workflows/codeql-config.yml
-        debug: true
-        
     - name: Set up build environment
       run: |
+          apt-get update
+          apt install -y software-properties-common
+          add-apt-repository ppa:git-core/ppa
           apt-get update
           apt-get install -y bc \
           bison \
@@ -61,10 +54,17 @@ jobs:
           llvm \
           rsync
 
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v1
+      with:
+        languages: ${{ matrix.language }}
+        
     - name: Set env variables
       run: |
           echo "REPO=eBPF-Package-Repository" >> $GITHUB_ENV
-          echo "PROG=ratelimiting" >> $GITHUB_ENV
           echo "BPF_PATH=samples/bpf" >> $GITHUB_ENV
           echo "LINUX_SRC_PATH=$GITHUB_WORKSPACE/linux" >> $GITHUB_ENV
       
@@ -75,12 +75,11 @@ jobs:
           make defconfig
           
     - name: Clone kernel function repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         path: linux/${{ env.BPF_PATH }}/${{ env.REPO }}/
 
     - name: Build eBPF Programs
-      working-directory: ${{ matrix.dir }}
       run: |
         cd $LINUX_SRC_PATH/$BPF_PATH/$REPO/${{ matrix.dir }}
         make
