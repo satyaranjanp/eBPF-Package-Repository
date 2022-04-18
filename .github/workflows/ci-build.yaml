@@ -1,4 +1,4 @@
-name: CI build for ipfix-flow-exporter
+name: CI build Linux
 on:
   pull_request: {}
   push:
@@ -10,7 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ubuntu:bionic 
-
+      
+    strategy:
+      matrix:
+        ebpfprogs: [ 'xdp-root', 'tc-root', 'connection-limit', 'ratelimiting', 'ipfix-flow-exporter']
+        
     steps:
       - name: Set up build environment
         run: |
@@ -38,11 +42,11 @@ jobs:
           linux-tools-generic \
           llvm \
           rsync
-
+          
       - name: Set env variables
         run: |
           echo "REPO=eBPF-Package-Repository" >> $GITHUB_ENV
-          echo "PROG=ipfix-flow-exporter" >> $GITHUB_ENV
+          echo "PROG=${{ matrix.ebpfprogs }}" >> $GITHUB_ENV
           echo "BPF_PATH=samples/bpf" >> $GITHUB_ENV
           echo "LINUX_SRC_PATH=$GITHUB_WORKSPACE/linux" >> $GITHUB_ENV
       
