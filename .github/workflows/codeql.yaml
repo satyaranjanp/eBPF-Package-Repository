@@ -1,0 +1,88 @@
+name: "CodeQL"
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:bionic
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'cpp' ]
+        ebpfprogs: ['xdp-root', 'tc-root', 'connection-limit', 'ipfix-flow-exporter', 'ratelimiting']
+        
+    steps:
+    - name: Set up build environment
+      run: |
+          apt-get update
+          apt install -y software-properties-common
+          add-apt-repository ppa:git-core/ppa
+          apt-get update
+          apt-get install -y bc \
+          bison \
+          build-essential \
+          clang \
+          curl \
+          exuberant-ctags \
+          flex \
+          gcc-8 \
+          gcc-multilib \
+          git \
+          gnutls-bin \
+          libc6-dev \
+          libcurl4-openssl-dev \
+          libelf-dev \
+          libjson-c-dev \
+          libncurses5-dev \
+          libpcap-dev \
+          libssl-dev \
+          linux-headers-generic \
+          linux-tools-common \
+          linux-tools-generic \
+          llvm \
+          rsync
+
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v1
+      with:
+        languages: ${{ matrix.language }}
+        
+    - name: Set env variables
+      run: |
+          echo "REPO=eBPF-Package-Repository" >> $GITHUB_ENV
+          echo "BPF_PATH=samples/bpf" >> $GITHUB_ENV
+          echo "LINUX_SRC_PATH=$GITHUB_WORKSPACE/linux" >> $GITHUB_ENV
+      
+    - name: Clone dependencies 
+      run: |
+          git clone --branch v5.1 --depth 1 https://github.com/torvalds/linux.git $LINUX_SRC_PATH
+          cd $LINUX_SRC_PATH
+          make defconfig
+          
+    - name: Clone kernel function repository
+      uses: actions/checkout@v3
+      with:
+        path: linux/${{ env.BPF_PATH }}/${{ env.REPO }}/
+
+    - name: Build eBPF Programs
+      run: |
+        cd $LINUX_SRC_PATH/$BPF_PATH/$REPO/${{ matrix.ebpfprogs }}
+        make
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v1
